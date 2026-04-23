@@ -1,0 +1,12 @@
+PORT=3001
+FRONTEND_URL=http://localhost:5178
+JWT_SECRET=ShepherdsDeskSecureKey2026
+ANTHROPIC_API_KEY=printf "PORT=3001\nFRONTEND_URL=http://localhost:5178\nJWT_SECRET=ShepherdsDeskSecureKey2026\nANTHROPIC_API_KEY=%s\n" "$(pbpaste)" > ~/Downloads/shepherds-desk-final/backend/.env
+PORT=3001
+FRONTEND_URL=http://localhost:5178
+JWT_SECRET=ShepherdsDeskSecureKey2026
+ANTHROPIC_API_KEY=PORT=3001\nFRONTEND_URL=http://localhost:5178\nJWT_SECRET=ShepherdsDeskSecureKey2026\nANTHROPIC_API_KEY=%s\n
+PORT=3001
+FRONTEND_URL=http://localhost:5178
+JWT_SECRET=ShepherdsDeskSecureKey2026
+ANTHROPIC_API_KEY=printf "PORT=3001\nFRONTEND_URL=http://localhost:5178\nJWT_SECRET=ShepherdsDeskSecureKey2026\nANTHROPIC_API_KEY=%s\n" "$(pbpaste)" > ~/Downloads/shepherds-desk-final/backend/.env
