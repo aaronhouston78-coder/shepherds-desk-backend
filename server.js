@@ -50,19 +50,23 @@ try {
 }
 
 // ── CORS ──────────────────────────────────────────────────────────────────────
-const CONFIGURED_ORIGIN = process.env.FRONTEND_URL || "";
-
+const CONFIGURED_ORIGIN = (process.env.FRONTEND_URL || "").trim().replace(/\/+$/, "");
 app.use(cors({
   origin: (origin, callback) => {
-    if (!origin) {
+    const cleanOrigin = (origin || "").trim().replace(/\/+$/, "");
+
+    if (!cleanOrigin) {
       if (IS_PROD) return callback(new Error("CORS: origin required in production"));
       return callback(null, true);
     }
-    if (CONFIGURED_ORIGIN && origin === CONFIGURED_ORIGIN) return callback(null, true);
-    if (!IS_PROD && /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin)) {
+
+    if (CONFIGURED_ORIGIN && cleanOrigin === CONFIGURED_ORIGIN) return callback(null, true);
+
+    if (!IS_PROD && /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(cleanOrigin)) {
       return callback(null, true);
     }
-    callback(new Error("CORS: origin not allowed"));
+
+    callback(new Error(`CORS: origin not allowed -> ${cleanOrigin}`));
   },
   credentials: true,
   optionsSuccessStatus: 200,
@@ -117,3 +121,5 @@ app.listen(PORT, () => {
     console.log(`FRONTEND_URL: ${CONFIGURED_ORIGIN || "(not set — localhost allowed)"}`);
   }
 });
+cd ~/Downloads/shepherds-desk-final/backend && nano server.js
+
