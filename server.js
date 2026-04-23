@@ -121,5 +121,5 @@ app.listen(PORT, () => {
     console.log(`FRONTEND_URL: ${CONFIGURED_ORIGIN || "(not set — localhost allowed)"}`);
   }
 });
-cd ~/Downloads/shepherds-desk-final/backend && nano server.js
+
 
