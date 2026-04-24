@@ -71,8 +71,7 @@ export function incrementFingerprintUsage(db, fingerprint, credits) {
 
 // Middleware — enforce trial limit for 'trial' plan users.
 export function enforceTrialLimit(req, res, next) {
-  // Only applies to legacy trial accounts (pending accounts are handled by planEnforcement)
-  if (req.userPlan !== TRIAL_PLAN) return next();
+  return next();
 
   const db = getDb();
   const user = db.prepare("SELECT reg_fingerprint FROM users WHERE id = ?").get(req.userId);
