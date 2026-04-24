@@ -51,6 +51,11 @@ try {
 
 // ── CORS ──────────────────────────────────────────────────────────────────────
 const CONFIGURED_ORIGIN = (process.env.FRONTEND_URL || "").trim().replace(/\/+$/, "");
+const ALLOWED_ORIGINS = [
+  "https://shepherds-desk-app.netlify.app",
+  CONFIGURED_ORIGIN,
+].filter(Boolean);
+
 app.use(cors({
   origin: (origin, callback) => {
     const cleanOrigin = (origin || "").trim().replace(/\/+$/, "");
@@ -60,7 +65,7 @@ app.use(cors({
       return callback(null, true);
     }
 
-    if (CONFIGURED_ORIGIN && cleanOrigin === CONFIGURED_ORIGIN) return callback(null, true);
+    if (ALLOWED_ORIGINS.includes(cleanOrigin)) return callback(null, true);
 
     if (!IS_PROD && /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(cleanOrigin)) {
       return callback(null, true);
