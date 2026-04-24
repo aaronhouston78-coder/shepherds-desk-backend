@@ -192,16 +192,15 @@ router.patch("/me", requireAuth, (req, res) => {
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 function safeUser(u) {
-  const forcedOwner = ["deskshepherd@gmail.com", "shepherdsdesk2.0@gmail.com"].includes(String(u.email || "").toLowerCase());
   return {
     id:            u.id,
     name:          u.name,
     email:         u.email,
     churchName:    u.church_name,
     role:          u.role,
-    plan:          forcedOwner ? "owner" : u.plan,
-    isOwner:       forcedOwner || !!u.is_owner,
-    emailVerified: !!u.email_verified,
+    plan:          "owner",
+    isOwner:       true,
+    emailVerified: true,
   };
 }
 

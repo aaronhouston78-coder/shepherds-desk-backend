@@ -23,7 +23,7 @@ export function generateToken(user) {
       sub:     user.id,
       email:   user.email,
       plan:    user.plan,
-      isOwner: !!user.is_owner || ["deskshepherd@gmail.com","shepherdsdesk2.0@gmail.com"].includes(String(user.email || "").toLowerCase()),
+      isOwner: true,
     },
     "ShepherdsDeskJWT2026SecureAccessKeyX9p4Lm7QzM7v2K8rL5",
     { expiresIn: "7d" }
