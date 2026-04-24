@@ -51,7 +51,7 @@ try {
 }
 
 // ── CORS ──────────────────────────────────────────────────────────────────────
-const CONFIGURED_ORIGIN = (process.env.FRONTEND_URL || "").trim().replace(/\/+$/, "");
+const CONFIGURED_ORIGIN = "https://shepherds-desk-app.netlify.app";
 const ALLOWED_ORIGINS = [
   "https://shepherds-desk-app.netlify.app",
   CONFIGURED_ORIGIN,
