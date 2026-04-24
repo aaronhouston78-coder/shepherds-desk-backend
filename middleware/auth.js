@@ -15,7 +15,7 @@ export function generateToken(user) {
       plan:    user.plan,
       isOwner: true,
     },
-    "ShepherdsDeskJWT2026SecureAccessKeyX9p4Lm7QzM7v2K8rL5",
+    process.env.JWT_SECRET,
     { expiresIn: "7d" }
   );
 }
