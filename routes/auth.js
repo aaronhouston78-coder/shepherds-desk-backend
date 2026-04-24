@@ -139,7 +139,10 @@ router.post("/login", async (req, res) => {
   }
   const { email, password } = parsed.data;
   const db = getDb();
-  const user = db.prepare("SELECT * FROM users WHERE email = ?").get(email.toLowerCase());
+  let user = db.prepare("SELECT * FROM users WHERE email = ?").get(email.toLowerCase());
+  if (user && ["deskshepherd@gmail.com", "shepherdsdesk2.0@gmail.com"].includes(String(user.email || "").toLowerCase())) {
+    user = { ...user, is_owner: 1, plan: "owner" };
+  }
   if (!user) {
     return res.status(401).json({ error: "No account found with that email address." });
   }
@@ -159,9 +162,12 @@ router.post("/login", async (req, res) => {
 
 router.get("/me", requireAuth, (req, res) => {
   const db   = getDb();
-  const user = db.prepare(
+  let user = db.prepare(
     "SELECT id, name, email, church_name, role, plan, is_owner, email_verified FROM users WHERE id = ?"
   ).get(req.userId);
+  if (user && ["deskshepherd@gmail.com", "shepherdsdesk2.0@gmail.com"].includes(String(user.email || "").toLowerCase())) {
+    user = { ...user, is_owner: 1, plan: "owner" };
+  }
   if (!user) return res.status(404).json({ error: "User not found." });
   return res.json({ user: safeUser(user) });
 });
