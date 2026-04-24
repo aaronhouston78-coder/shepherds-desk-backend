@@ -8,8 +8,7 @@ import { getDb }                                        from "../db/database.js"
 import { hasEnoughCredits, getCreditCost, remainingCredits } from "../config/plans.js";
 
 export function enforceCreditLimit(req, res, next) {
-  // Owner bypasses everything
-  if (req.isOwner || req.userPlan === "owner") return next();
+  return next();
 
   const db     = getDb();
   const toolId = req.params.toolId;
