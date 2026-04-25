@@ -23,10 +23,10 @@ export function registerFingerprint(db, userId, fingerprint) {
   if (!fingerprint) return;
   db.prepare("UPDATE users SET reg_fingerprint = ? WHERE id = ?").run(fingerprint, userId);
   db.prepare(`
-    INSERT INTO fingerprint_registry (fingerprint, first_user_id, total_credits_used)
-    VALUES (?, ?, 0)
+    INSERT INTO fingerprint_registry (fingerprint, total_credits_used)
+    VALUES (?, 0)
     ON CONFLICT(fingerprint) DO NOTHING
-  `).run(fingerprint, userId);
+  `).run(fingerprint);
 }
 
 export function incrementFingerprintUsage(db, fingerprint, amount = 1) {
