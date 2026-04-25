@@ -13,6 +13,10 @@
 // This means local development works without a provider configured.
 
 const DEV_MODE = !process.env.RESEND_API_KEY;
+console.log("[emailService startup] RESEND_API_KEY present:", !!process.env.RESEND_API_KEY);
+console.log("[emailService startup] EMAIL_FROM:", process.env.EMAIL_FROM || "(missing)");
+console.log("[emailService startup] FRONTEND_URL:", process.env.FRONTEND_URL || "(missing)");
+
 
 let _resend = null;
 async function getResend() {
