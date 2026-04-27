@@ -16,7 +16,6 @@ const IS_PROD   = process.env.NODE_ENV === "production";
 mkdirSync(join(__dirname, "data"), { recursive: true });
 
 const app  = express();
-app.set("trust proxy", 1);
 const PORT = process.env.PORT || 3001;
 
 // ── Security headers ──────────────────────────────────────────────────────────
@@ -51,29 +50,20 @@ try {
 }
 
 // ── CORS ──────────────────────────────────────────────────────────────────────
-const CONFIGURED_ORIGIN = process.env.FRONTEND_URL || "https://shepherds-desk-app.netlify.app";
-const ALLOWED_ORIGINS = [
-  "https://shepherds-desk-app.netlify.app",
-  "https://theshepherdsdesk.org",
-  CONFIGURED_ORIGIN,
-].filter(Boolean);
+const CONFIGURED_ORIGIN = process.env.FRONTEND_URL || "";
 
 app.use(cors({
   origin: (origin, callback) => {
-    const cleanOrigin = (origin || "").trim().replace(/\/+$/, "");
+    // Allow Stripe webhooks and other non-browser server-to-server requests
+    if (!origin) return callback(null, true);
 
-    if (!cleanOrigin) {
-      if (IS_PROD) return callback(new Error("CORS: origin required in production"));
+    if (CONFIGURED_ORIGIN && origin === CONFIGURED_ORIGIN) return callback(null, true);
+
+    if (!IS_PROD && /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin)) {
       return callback(null, true);
     }
 
-    if (ALLOWED_ORIGINS.includes(cleanOrigin)) return callback(null, true);
-
-    if (!IS_PROD && /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(cleanOrigin)) {
-      return callback(null, true);
-    }
-
-    callback(new Error(`CORS: origin not allowed -> ${cleanOrigin}`));
+    callback(new Error("CORS: origin not allowed"));
   },
   credentials: true,
   optionsSuccessStatus: 200,
@@ -128,5 +118,3 @@ app.listen(PORT, () => {
     console.log(`FRONTEND_URL: ${CONFIGURED_ORIGIN || "(not set — localhost allowed)"}`);
   }
 });
-
-
