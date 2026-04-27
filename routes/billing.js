@@ -205,58 +205,54 @@ router.post("/webhook", async (req, res) => {
         break;
       }
 
-      case "customer.subscription.created":
-      case "customer.subscription.updated": {
-        const sub    = event.data.object;
-        const userId = sub.metadata?.userId;
-        const planId = sub.metadata?.planId ?? resolvedPlanFromSub(sub);
-        const status = sub.status; // active | past_due | canceled | etc.
+ case "customer.subscription.created":
+case "customer.subscription.updated": {
+  const sub    = event.data.object;
+  const userId = sub.metadata?.userId;
+  const planId = sub.metadata?.planId ?? resolvedPlanFromSub(sub);
+  const status = sub.status; // active | past_due | canceled | incomplete_expired | etc.
 
-        if (!userId) {
-          // Look up user by stripe_customer_id as a fallback
-          const user = db.prepare("SELECT id FROM users WHERE stripe_customer_id = ?").get(sub.customer);
-          if (user) {
-            const resolvedPlan = planId ?? resolvedPlanFromPriceId(sub, db);
-            db.prepare(
-              "UPDATE users SET plan = ?, stripe_sub_id = ?, stripe_sub_status = ?, updated_at = datetime('now') WHERE id = ?"
-            ).run(resolvedPlan || "starter", sub.id, status, user.id);
-            console.log(`[billing] ${event.type} → user ${user.id} → plan ${resolvedPlan} status ${status}`);
-          }
-          break;
-        }
+  let targetUserId = userId;
 
-        const effectivePlan = status === "active" || status === "trialing"
-          ? (planId ?? "starter")
-          : "pending"; // past_due or incomplete — revoke generation access
+  if (!targetUserId) {
+    const user = db.prepare("SELECT id FROM users WHERE stripe_customer_id = ?").get(sub.customer);
+    targetUserId = user?.id || null;
+  }
 
-        db.prepare(
-          "UPDATE users SET plan = ?, stripe_sub_id = ?, stripe_sub_status = ?, updated_at = datetime('now') WHERE id = ?"
-        ).run(effectivePlan, sub.id, status, userId);
-        console.log(`[billing] ${event.type} → user ${userId} → plan ${effectivePlan} status ${status}`);
-        break;
-      }
+  if (!targetUserId) break;
 
-      case "customer.subscription.deleted": {
-        const sub    = event.data.object;
-        const userId = sub.metadata?.userId;
+  const current = db.prepare(`
+    SELECT stripe_sub_id, stripe_sub_status
+    FROM users
+    WHERE id = ?
+    LIMIT 1
+  `).get(targetUserId);
 
-        if (userId) {
-          db.prepare(
-            "UPDATE users SET plan = 'pending', stripe_sub_status = 'canceled', updated_at = datetime('now') WHERE id = ?"
-          ).run(userId);
-          console.log(`[billing] subscription.deleted → user ${userId} → access revoked`);
-        } else {
-          // Fallback: find by customer ID
-          const user = db.prepare("SELECT id FROM users WHERE stripe_customer_id = ?").get(sub.customer);
-          if (user) {
-            db.prepare(
-              "UPDATE users SET plan = 'pending', stripe_sub_status = 'canceled', updated_at = datetime('now') WHERE id = ?"
-            ).run(user.id);
-            console.log(`[billing] subscription.deleted → user ${user.id} (by customer id) → access revoked`);
-          }
-        }
-        break;
-      }
+  const isActiveStatus = status === "active" || status === "trialing";
+
+  if (
+    !isActiveStatus &&
+    current?.stripe_sub_id &&
+    current.stripe_sub_id !== sub.id &&
+    current?.stripe_sub_status === "active"
+  ) {
+    console.log(
+      `[billing] ignoring ${event.type} for sub ${sub.id} because user ${targetUserId} already has active sub ${current.stripe_sub_id}`
+    );
+    break;
+  }
+
+  const effectivePlan = isActiveStatus ? (planId ?? "starter") : "pending";
+
+  db.prepare(
+    "UPDATE users SET plan = ?, stripe_sub_id = ?, stripe_sub_status = ?, updated_at = datetime('now') WHERE id = ?"
+  ).run(effectivePlan, sub.id, status, targetUserId);
+
+  console.log(
+    `[billing] ${event.type} → user ${targetUserId} → plan ${effectivePlan} status ${status}`
+  );
+  break;
+}
 
       case "invoice.payment_failed": {
         // Log for monitoring — access is not immediately revoked on first failure
