@@ -252,7 +252,7 @@ case "customer.subscription.updated": {
     `[billing] ${event.type} → user ${targetUserId} → plan ${effectivePlan} status ${status}`
   );
   break;
-}
+}s
 
       case "invoice.payment_failed": {
         // Log for monitoring — access is not immediately revoked on first failure
