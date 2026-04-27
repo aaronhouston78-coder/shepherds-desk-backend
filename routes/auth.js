@@ -139,8 +139,17 @@ router.post("/login", async (req, res) => {
   }
   const { email, password } = parsed.data;
   const db = getDb();
-  const user = db.prepare("SELECT * FROM users WHERE email = ?").get(email.toLowerCase());
-  if (!user) {
+const user = db.prepare(`
+  SELECT *
+  FROM users
+  WHERE lower(email) = lower(?)
+  ORDER BY
+    CASE WHEN plan IN ('starter', 'growth', 'team') THEN 0 ELSE 1 END,
+    CASE WHEN email_verified = 1 THEN 0 ELSE 1 END,
+    datetime(updated_at) DESC,
+    rowid DESC
+  LIMIT 1
+`).get(email.toLowerCase());  if (!user) {
     return res.status(401).json({ error: "No account found with that email address." });
   }
   const valid = await bcrypt.compare(password, user.password);
