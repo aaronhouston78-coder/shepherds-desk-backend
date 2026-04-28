@@ -156,14 +156,13 @@ CLOSING REFLECTION is protected. Never shorten or omit it. If running long, cut 
 
 LANGUAGE: Avoid: tension, journey, unpack, unpacking, dive in, dive deep, explore, narrative, resonate, let that sink in, in today's world, transformative, transformational. Use direct, specific, varied language.
 
-Return using these exact plain section headers:
-
 LESSON OVERVIEW
 SCRIPTURE CONTEXT
 CORE TEACHING POINTS
 DISCUSSION PROMPTS
 LIFE TAKEAWAYS
 CLOSING REFLECTION`,
+  },
   announcement: {
     label:      "Announcement Builder",
     titleField: "eventName",
