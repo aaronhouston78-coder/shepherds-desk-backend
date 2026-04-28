@@ -164,8 +164,6 @@ CORE TEACHING POINTS
 DISCUSSION PROMPTS
 LIFE TAKEAWAYS
 CLOSING REFLECTION`,
-  },
-
   announcement: {
     label:      "Announcement Builder",
     titleField: "eventName",
