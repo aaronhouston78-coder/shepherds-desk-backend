@@ -132,7 +132,7 @@ ALTAR CALL STARTER: 90 to 120 words — write this section completely, end on a 
       tone:      z.enum(["Practical","Devotional","Academic","Conversational","Expository"]),
       depth:     z.enum(["Introductory","Moderate","In-depth","Advanced"]),
     }),
-    buildPrompt: (f) => `You are a ministry content assistant helping prepare a Bible study lesson. All content must be biblically accurate and teachable.
+buildPrompt: (f) => `You are a ministry content assistant helping prepare a Bible study lesson. All content must be biblically accurate and teachable.
 
 TRANSLATION REQUIREMENT: You must quote all scripture in the King James Version (KJV). This is a hard requirement. Do not use NIV, ESV, NLT, NASB, or any other version. KJV only.
 
