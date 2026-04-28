@@ -9,6 +9,65 @@ import { generateToken, requireAuth } from "../middleware/auth.js";
 import { buildServerFingerprint, registerFingerprint, TRIAL_CREDIT_LIMIT } from "../middleware/trialGuard.js";
 import { sendVerificationEmail } from "../services/emailService.js";
 
+import { createRequire } from "module";
+const require = createRequire(import.meta.url);
+
+let _stripe = null;
+function getStripeClient() {
+  if (!process.env.STRIPE_SECRET_KEY) return null;
+  if (!_stripe) {
+    const Stripe = require("stripe");
+    _stripe = new Stripe(process.env.STRIPE_SECRET_KEY, { apiVersion: "2023-10-16" });
+  }
+  return _stripe;
+}
+
+async function refreshPaidLoginUserFromStripe(db, user) {
+  if (!user || user.plan !== "pending") return user;
+
+  const stripe = getStripeClient();
+  if (!stripe) return user;
+
+  try {
+    const customers = user.stripe_customer_id
+      ? [{ id: user.stripe_customer_id }]
+      : (await stripe.customers.list({ email: user.email, limit: 10 })).data;
+
+    for (const customer of customers) {
+      const subs = await stripe.subscriptions.list({
+        customer: customer.id,
+        status: "all",
+        limit: 10,
+      });
+
+      const activeSub = subs.data.find(
+        (sub) => sub.status === "active" || sub.status === "trialing"
+      );
+
+      if (!activeSub) continue;
+
+      const resolvedPlan = activeSub.metadata?.planId || "starter";
+
+      db.prepare(`
+        UPDATE users
+        SET plan = ?,
+            stripe_customer_id = ?,
+            stripe_sub_id = ?,
+            stripe_sub_status = ?,
+            updated_at = datetime('now')
+        WHERE id = ?
+      `).run(resolvedPlan, customer.id, activeSub.id, activeSub.status, user.id);
+
+      return db.prepare("SELECT * FROM users WHERE id = ?").get(user.id);
+    }
+  } catch (err) {
+    console.error("[auth/login] Stripe sync failed:", err?.message ?? err);
+  }
+
+  return user;
+}
+
+
 const router = Router();
 
 const RegisterSchema = z.object({
@@ -139,7 +198,7 @@ router.post("/login", async (req, res) => {
   }
   const { email, password } = parsed.data;
   const db = getDb();
-const user = db.prepare(`
+let user = db.prepare(`
   SELECT *
   FROM users
   WHERE lower(email) = lower(?)
@@ -149,7 +208,9 @@ const user = db.prepare(`
     datetime(updated_at) DESC,
     rowid DESC
   LIMIT 1
-`).get(email.toLowerCase());  if (!user) {
+`).get(email.toLowerCase());
+
+user = await refreshPaidLoginUserFromStripe(db, user); if (!user) {
     return res.status(401).json({ error: "No account found with that email address." });
   }
   const valid = await bcrypt.compare(password, user.password);
