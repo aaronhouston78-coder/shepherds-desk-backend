@@ -10,8 +10,8 @@
 //
 // OUTPUT WORD LIMITS:
 //   Hard caps enforced server-side in aiService.js.
-//   Sermon: 1,500 words max (framework for a full message)
-//   Bible study: 1,000 words max
+//   Sermon: 1,200 words max (framework for a full message)
+//   Bible study: 800 words max
 //   Caption: 60–120 words
 //   Follow-up: 90–150 words
 //   Announcement: 125–210 words
@@ -31,62 +31,62 @@ export const PLANS = {
 
   // ── Paid tiers ──────────────────────────────────────────────────────────────
   starter: {
-    id:              "starter",
-    label:           "Starter",
-    price:           19,
-    currency:        "usd",
-    interval:        "month",
-    // 8 sermons OR ~32 short-form pieces per month
-    creditsPerMonth: 32,
-    features: {
-      savedGenerations: true,
-      savedTemplates:   false,
-      teamAccess:       false,
-    },
+  id:              "starter",
+  label:           "Starter",
+  price:           19,
+  currency:        "usd",
+  interval:        "month",
+  creditsPerMonth: 40,
+  features: {
+    savedGenerations: true,
+    savedTemplates:   true,
+    teamAccess:       false,
+    seats:            1,
   },
-  growth: {
-    id:              "growth",
-    label:           "Growth",
-    price:           49,
-    currency:        "usd",
-    interval:        "month",
-    // 25 sermons OR ~100 short-form pieces per month
-    creditsPerMonth: 100,
-    features: {
-      savedGenerations: true,
-      savedTemplates:   true,
-      teamAccess:       false,
-    },
+},
+growth: {
+  id:              "growth",
+  label:           "Growth",
+  price:           49,
+  currency:        "usd",
+  interval:        "month",
+  creditsPerMonth: 140,
+  features: {
+    savedGenerations: true,
+    savedTemplates:   true,
+    teamAccess:       false,
+    seats:            1,
   },
-  team: {
-    id:              "team",
-    label:           "Church Team",
-    price:           99,
-    currency:        "usd",
-    interval:        "month",
-    // 50 sermons OR ~200 short-form pieces per month
-    creditsPerMonth: 200,
-    features: {
-      savedGenerations: true,
-      savedTemplates:   true,
-      teamAccess:       true,
-    },
+},
+team: {
+  id:              "team",
+  label:           "Church Team",
+  price:           99,
+  currency:        "usd",
+  interval:        "month",
+  creditsPerMonth: 300,
+  features: {
+    savedGenerations: true,
+    savedTemplates:   true,
+    teamAccess:       true,
+    seats:            5,
   },
-
+},
   // ── Owner plan ───────────────────────────────────────────────────────────────
   // Assigned to the product owner. Bypasses all credit and billing checks.
   // Never shown to subscribers. Set via DB: UPDATE users SET plan='owner', is_owner=1
-  owner: {
-    id:              "owner",
-    label:           "Owner",
-    price:           0,
-    creditsPerMonth: 999999,
-    features: {
-      savedGenerations: true,
-      savedTemplates:   true,
-      teamAccess:       true,
-    },
+ owner: {
+  id:              "owner",
+  label:           "Owner",
+  price:           0,
+  creditsPerMonth: 999999,
+  features: {
+    savedGenerations: true,
+    savedTemplates:   true,
+    teamAccess:       true,
+    seats:            999,
   },
+},
 };
 
 // ── Stripe price IDs ──────────────────────────────────────────────────────────
@@ -121,8 +121,8 @@ export const DEFAULT_PLAN        = "pending"; // new accounts — must subscribe
 // These are the maximum word counts returned to the client.
 // Enforced server-side in aiService.js processOutput().
 export const TOOL_OUTPUT_LIMITS = {
-  "sermon":       1500,
-  "bible-study":  1000,
+  "sermon":       1200,
+  "bible-study":  800,
   "caption":      120,
   "follow-up":    150,
   "announcement": 210,
@@ -153,4 +153,17 @@ export function remainingCredits(planId, creditsUsed) {
 
 export function getOutputWordLimit(toolId) {
   return TOOL_OUTPUT_LIMITS[toolId] ?? 500;
+}
+export function canUseFeature(planId, featureName) {
+  const plan = getPlan(planId);
+  return Boolean(plan.features?.[featureName]);
+}
+
+export function getSeatLimit(planId) {
+  const plan = getPlan(planId);
+  return plan.features?.seats ?? 1;
+}
+
+export function hasTeamAccess(planId) {
+  return canUseFeature(planId, "teamAccess");
 }
