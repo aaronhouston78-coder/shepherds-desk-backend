@@ -40,17 +40,23 @@ router.post(
       const plan    = getPlan(planId);
       const eventId = Math.random().toString(36).slice(2) + Date.now().toString(36);
 
-      db.prepare(
-        "INSERT INTO usage_events (id, user_id, event_type, tool_id, credits_used) VALUES (?, ?, 'generation', ?, ?)"
-      ).run(eventId, req.userId, toolId, cost);
+      try {
+  db.prepare(
+    "INSERT INTO usage_events (id, user_id, event_type, tool_id, credits_used) VALUES (?, ?, 'generation', ?, ?)"
+  ).run(eventId, req.userId, toolId, cost);
 
-      if (req.trialFingerprint) {
-        incrementFingerprintUsage(db, req.trialFingerprint, cost);
-      }
+  if (req.trialFingerprint) {
+    incrementFingerprintUsage(db, req.trialFingerprint, cost);
+  }
+} catch (usageErr) {
+  console.error(
+    `[usage_events] non-fatal logging failure toolId=${toolId} userId=${req.userId} err=${usageErr?.message ?? usageErr}`
+  );
+}
 
-      return res.json(
-        formatGenerationResponse(output, req.creditsUsed ?? 0, plan.creditsPerMonth, cost)
-      );
+return res.json(
+  formatGenerationResponse(output, req.creditsUsed ?? 0, plan.creditsPerMonth, cost)
+);
     } catch (err) {
       // Log internally — never expose error details to client
       console.error(`[generate] toolId=${toolId} userId=${req.userId} err=${err?.message ?? err}`);
