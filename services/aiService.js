@@ -106,6 +106,13 @@ STRUCTURE RULES:
 - Do not use labels like "this sermon is about" or "in this message we will cover"
 - Altar call language should match the tone — Prophetic and Revivalist should press hard; Pastoral and Teaching should close warmly; Evangelistic should make a clear call to repentance; Exhortative should leave the hearer charged to act.
 
+Scripture: ${f.scripture}
+Title: ${f.title}
+Main Topic/Theme: ${f.topic}
+Preaching Tone: ${f.tone}
+Audience: ${f.audience}
+Structure Style: ${f.style}
+
 OUTPUT LENGTH — HARD SECTION WORD LIMITS:
 Target: 1000 to 1200 words total. Every section has a strict word ceiling. Stay within these limits:
 
