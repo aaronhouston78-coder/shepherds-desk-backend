@@ -23,24 +23,24 @@ import { z } from "zod";
 // They are used BOTH in the prompt and by the backend section trimmer.
 // The trimmer enforces what the prompt only requests.
 //
-// Target total:  600–700 words
+// Target total:  1000-1200 words
 // Protected:     STRONG CLOSE + ALTAR CALL STARTER are never trimmed
 // Trimmed first: MAIN MOVEMENTS (largest, least essential per word)
 // Trimmed second: LIFE APPLICATION POINTS
 
 const SERMON_SECTION_BUDGETS = {
-  "SCRIPTURE FOUNDATION": { min: 30, max: 45 },
-  "SERMON INTRODUCTION":  { min: 75, max: 95 },
-  "MAIN MOVEMENTS":       { min: 200, max: 240 },  // trim here first
-  "LIFE APPLICATION POINTS": { min: 65, max: 80 }, // trim here second
-  "PROPHETIC PIVOT":      { min: 55, max: 65 },
-  "STRONG CLOSE":         { min: 90, max: 110 },   // PROTECTED
-  "ALTAR CALL STARTER":   { min: 65, max: 75 },    // PROTECTED
+  "SCRIPTURE FOUNDATION":    { min: 45,  max: 65 },
+  "SERMON INTRODUCTION":     { min: 120, max: 160 },
+  "MAIN MOVEMENTS":          { min: 360, max: 460 },
+  "LIFE APPLICATION POINTS": { min: 120, max: 160 },
+  "PROPHETIC PIVOT":         { min: 90,  max: 120 },
+  "STRONG CLOSE":            { min: 140, max: 180 },
+  "ALTAR CALL STARTER":      { min: 90,  max: 120 },
 };
 
 // Total max if every section hits its ceiling
 const SERMON_MAX_WORDS = Object.values(SERMON_SECTION_BUDGETS).reduce((s, b) => s + b.max, 0);
-// = 45+95+240+80+65+110+75 = 710 words
+// = 65+160+460+160+120+180+120 = 1265 words
 
 // ── Tool registry ─────────────────────────────────────────────────────────────
 
@@ -49,14 +49,14 @@ export const TOOLS = {
     label:      "Sermon Builder",
     titleField: "title",
     // maxTokens rationale:
-    //   Target output: 600-700 words
+    //   Target output: 1000-1200 words
     //   Worst case if model ignores word count: ~900 words × 1.35 tokens = 1215 tokens
     //   Ending sections budget: ~185 words × 1.35 = 250 tokens
     //   Total needed: 1215 + 250 = 1465 + safety buffer = 1800
     //   Target output: 600-1500 words (paid product range)
     //   1500 words × 1.35 = 2025 tokens + 200 overhead = 2225 needed
-    //   maxTokens=2400 gives 175 token buffer above max
-    maxTokens:  2400,
+    //   maxTokens=2000 gives 175 token buffer above max
+    maxTokens:  2000,
     schema: z.object({
       scripture: z.string().min(2).max(300),
       title:     z.string().min(2).max(200),
@@ -106,26 +106,19 @@ STRUCTURE RULES:
 - Do not use labels like "this sermon is about" or "in this message we will cover"
 - Altar call language should match the tone — Prophetic and Revivalist should press hard; Pastoral and Teaching should close warmly; Evangelistic should make a clear call to repentance; Exhortative should leave the hearer charged to act.
 
-Scripture: ${f.scripture}
-Title: ${f.title}
-Main Topic/Theme: ${f.topic}
-Preaching Tone: ${f.tone}
-Audience: ${f.audience}
-Structure Style: ${f.style}
-
 OUTPUT LENGTH — HARD SECTION WORD LIMITS:
-Target: 600 to 700 words total. Every section has a strict word ceiling. Stay within these limits:
+Target: 1000 to 1200 words total. Every section has a strict word ceiling. Stay within these limits:
 
-SCRIPTURE FOUNDATION: 30 to 45 words
-SERMON INTRODUCTION: 75 to 95 words
-MAIN MOVEMENTS: 200 to 240 words total — if running long, cut this section first
-LIFE APPLICATION POINTS: 65 to 80 words — if still running long, cut this section second
-PROPHETIC PIVOT: 55 to 65 words
-STRONG CLOSE: 90 to 110 words — write this section completely, no shortcuts
-ALTAR CALL STARTER: 65 to 75 words — write this section completely, end on a full sentence
+SCRIPTURE FOUNDATION: 45 to 65 words
+SERMON INTRODUCTION: 120 to 160 words
+MAIN MOVEMENTS: 360 to 460 words total — if running long, cut this section first
+LIFE APPLICATION POINTS: 120 to 160 words — if still running long, cut this section second
+PROPHETIC PIVOT: 90 to 120 words
+STRONG CLOSE: 140 to 180 words — write this section completely, no shortcuts
+ALTAR CALL STARTER: 90 to 120 words — write this section completely, end on a full sentence
 
 COMPLETION RULE — NON-NEGOTIABLE:
-STRONG CLOSE and ALTAR CALL STARTER must always be written completely. Never cut them short. A 600-word sermon that ends with a complete altar call is better than an 800-word sermon that stops mid-invitation. If the body sections run long, trim them — never the ending. The final word of ALTAR CALL STARTER must be the last word of a complete sentence. Do not stop mid-sentence under any circumstance.
+STRONG CLOSE and ALTAR CALL STARTER must always be written completely. Never cut them short. A 1000-word sermon that ends with a complete altar call is better than a 1200-word sermon that stops mid-invitation. If the body sections run long, trim them — never the ending. The final word of ALTAR CALL STARTER must be the last word of a complete sentence. Do not stop mid-sentence under any circumstance.
 
 LANGUAGE: Avoid these overused phrases — do not use them anywhere in the output: tension, journey, unpack, unpacking, dive in, dive deep, explore, narrative, resonate, let that sink in, in today's world, transformative, transformational, liminal, seamlessly, it is worth noting, at the end of the day. Use direct, specific, varied language. Never repeat the same word or phrase in consecutive sentences.
 
@@ -154,7 +147,7 @@ ALTAR CALL STARTER`,
       tone:      z.enum(["Practical","Devotional","Academic","Conversational","Expository"]),
       depth:     z.enum(["Introductory","Moderate","In-depth","Advanced"]),
     }),
-    buildPrompt: (f) => `You are a ministry content assistant helping prepare a Bible study lesson. All content must be biblically accurate and teachable.
+buildPrompt: (f) => `You are a ministry content assistant helping prepare a Bible study lesson. All content must be biblically accurate and teachable.
 
 TRANSLATION REQUIREMENT: You must quote all scripture in the King James Version (KJV). This is a hard requirement. Do not use NIV, ESV, NLT, NASB, or any other version. KJV only.
 
@@ -178,8 +171,6 @@ CLOSING REFLECTION is protected. Never shorten or omit it. If running long, cut 
 
 LANGUAGE: Avoid: tension, journey, unpack, unpacking, dive in, dive deep, explore, narrative, resonate, let that sink in, in today's world, transformative, transformational. Use direct, specific, varied language.
 
-Return using these exact plain section headers:
-
 LESSON OVERVIEW
 SCRIPTURE CONTEXT
 CORE TEACHING POINTS
@@ -187,7 +178,6 @@ DISCUSSION PROMPTS
 LIFE TAKEAWAYS
 CLOSING REFLECTION`,
   },
-
   announcement: {
     label:      "Announcement Builder",
     titleField: "eventName",
@@ -375,7 +365,7 @@ const TRIM_TARGETS = {
   "LIFE APPLICATION POINTS": SERMON_SECTION_BUDGETS["LIFE APPLICATION POINTS"].max,
 };
 
-const SERMON_WORD_CEILING = 1500; // hard cap matching paid product spec
+const SERMON_WORD_CEILING = 1200; // hard cap matching paid product spec
 
 function trimSermonIfOverlength(output) {
   const wordCount = output.split(/\s+/).filter(Boolean).length;
