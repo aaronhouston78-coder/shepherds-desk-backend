@@ -1,37 +1,37 @@
 import "dotenv/config";
-import express          from "express";
-import cors             from "cors";
-import { mkdirSync }    from "fs";
+import express from "express";
+import cors from "cors";
+import { mkdirSync } from "fs";
 import { join, dirname } from "path";
 import { fileURLToPath } from "url";
 import { globalLimiter } from "./middleware/rateLimiter.js";
-import authRoutes       from "./routes/auth.js";
-import generatorRoutes  from "./routes/generators.js";
-import adminRoutes      from "./routes/admin.js";
-import billingRoutes    from "./routes/billing.js";
+import authRoutes from "./routes/auth.js";
+import generatorRoutes from "./routes/generators.js";
+import adminRoutes from "./routes/admin.js";
+import billingRoutes from "./routes/billing.js";
+import teamRoutes from "./routes/team.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const IS_PROD   = process.env.NODE_ENV === "production";
+const IS_PROD = process.env.NODE_ENV === "production";
 
 mkdirSync(join(__dirname, "data"), { recursive: true });
 
-const app  = express();
+const app = express();
 app.set("trust proxy", 1);
 const PORT = process.env.PORT || 3001;
 
-// ── Security headers ──────────────────────────────────────────────────────────
 try {
   const { default: helmet } = await import("helmet");
   app.use(helmet({
     contentSecurityPolicy: {
       directives: {
         defaultSrc: ["'self'"],
-        scriptSrc:  ["'self'"],
-        styleSrc:   ["'self'", "'unsafe-inline'"],
-        imgSrc:     ["'self'", "data:"],
+        scriptSrc: ["'self'"],
+        styleSrc: ["'self'", "'unsafe-inline'"],
+        imgSrc: ["'self'", "data:"],
         connectSrc: ["'self'"],
-        frameSrc:   ["'none'"],
-        objectSrc:  ["'none'"],
+        frameSrc: ["'none'"],
+        objectSrc: ["'none'"],
       },
     },
     crossOriginEmbedderPolicy: false,
@@ -39,23 +39,21 @@ try {
 } catch {
   app.use((_req, res, next) => {
     res.set({
-      "X-Content-Type-Options":    "nosniff",
-      "X-Frame-Options":           "DENY",
-      "X-XSS-Protection":          "0",
-      "Referrer-Policy":           "no-referrer",
+      "X-Content-Type-Options": "nosniff",
+      "X-Frame-Options": "DENY",
+      "X-XSS-Protection": "0",
+      "Referrer-Policy": "no-referrer",
       "Strict-Transport-Security": "max-age=31536000; includeSubDomains",
-      "Permissions-Policy":        "camera=(), microphone=(), geolocation=()",
+      "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
     });
     next();
   });
 }
 
-// ── CORS ──────────────────────────────────────────────────────────────────────
 const CONFIGURED_ORIGIN = process.env.FRONTEND_URL || "";
 
 app.use(cors({
   origin: (origin, callback) => {
-    // Allow Stripe webhooks and other non-browser server-to-server requests
     if (!origin) return callback(null, true);
 
     if (CONFIGURED_ORIGIN && origin === CONFIGURED_ORIGIN) return callback(null, true);
@@ -70,30 +68,23 @@ app.use(cors({
   optionsSuccessStatus: 200,
 }));
 
-// ── Webhook route — MUST come before express.json() ───────────────────────────
-// Stripe requires the raw request body to verify the webhook signature.
-// Registering this route first, before the JSON body parser, ensures the
-// raw buffer is available in req.body for the webhook handler.
 app.use(
   "/api/billing/webhook",
   express.raw({ type: "application/json" }),
   (req, _res, next) => {
-    // Keep the raw buffer as req.body — billingRoutes webhook handler reads it directly
     next();
   }
 );
 
-// ── Body parser ───────────────────────────────────────────────────────────────
-// All other routes receive parsed JSON
 app.use(express.json({ limit: "16kb" }));
 
 app.disable("x-powered-by");
 app.use(globalLimiter);
 
-// ── Routes ────────────────────────────────────────────────────────────────────
-app.use("/api/auth",       authRoutes);
-app.use("/api/billing",    billingRoutes);
-app.use("/api/admin",      adminRoutes);
+app.use("/api/auth", authRoutes);
+app.use("/api/billing", billingRoutes);
+app.use("/api/admin", adminRoutes);
+app.use("/api/team", teamRoutes);
 app.use("/api/generators", generatorRoutes);
 
 app.get("/api/health", (_req, res) => res.json({ status: "ok" }));
@@ -109,7 +100,7 @@ app.use((err, _req, res, _next) => {
 });
 
 app.listen(PORT, () => {
-  const keyStatus    = process.env.ANTHROPIC_API_KEY ? "set" : "NOT SET";
+  const keyStatus = process.env.ANTHROPIC_API_KEY ? "set" : "NOT SET";
   const stripeStatus = process.env.STRIPE_SECRET_KEY ? "set" : "not set — billing disabled";
   console.log(`Shepherd's Desk API listening on port ${PORT}`);
   console.log(`Environment: ${process.env.NODE_ENV ?? "development"}`);
