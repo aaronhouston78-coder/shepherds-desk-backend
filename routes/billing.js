@@ -24,9 +24,10 @@
 //   FRONTEND_URL            — your deployed frontend origin (already required)
 
 import { Router }   from "express";
+import { randomUUID } from "crypto";
 import { requireAuth } from "../middleware/auth.js";
 import { getDb }    from "../db/database.js";
-import { getPlan, getStripePriceId, VALID_PLAN_IDS } from "../config/plans.js";
+import { getPlan, getStripePriceId, VALID_PLAN_IDS, getAddOnCreditPack } from "../config/plans.js";
 
 const router = Router();
 
@@ -118,6 +119,79 @@ router.post("/checkout", requireAuth, async (req, res) => {
   }
 });
 
+// ── POST /credits/checkout ───────────────────────────────────────────────────
+// Creates a one-time Stripe Checkout session for add-on credit packs.
+// Returns { url } — frontend redirects the user there.
+
+router.post("/credits/checkout", requireAuth, async (req, res) => {
+  const { packId } = req.body;
+  const pack = getAddOnCreditPack(packId);
+
+  if (!pack) {
+    return res.status(400).json({ error: "Invalid credit pack selected." });
+  }
+
+  if (req.userPlan === "pending" || req.userPlan === "trial") {
+    return res.status(402).json({
+      error: "A paid subscription is required before purchasing additional credits.",
+      code: "SUBSCRIPTION_REQUIRED",
+    });
+  }
+
+  const db = getDb();
+  const user = db.prepare("SELECT id, name, email, stripe_customer_id FROM users WHERE id = ?").get(req.userId);
+  if (!user) return res.status(404).json({ error: "User not found." });
+
+  let stripe;
+  try { stripe = getStripe(); } catch {
+    return res.status(500).json({ error: "Billing is not yet configured. Please contact support." });
+  }
+
+  try {
+    let customerId = user.stripe_customer_id;
+    if (!customerId) {
+      const customer = await stripe.customers.create({
+        email: user.email,
+        name: user.name,
+        metadata: { userId: user.id },
+      });
+      customerId = customer.id;
+      db.prepare("UPDATE users SET stripe_customer_id = ? WHERE id = ?").run(customerId, user.id);
+    }
+
+    const session = await stripe.checkout.sessions.create({
+      mode: "payment",
+      customer: customerId,
+      line_items: [
+        {
+          price_data: {
+            currency: "usd",
+            product_data: {
+              name: pack.label,
+              description: pack.description,
+            },
+            unit_amount: pack.price * 100,
+          },
+          quantity: 1,
+        },
+      ],
+      success_url: `${APP_URL()}/settings?credits=success`,
+      cancel_url: `${APP_URL()}/settings?credits=cancelled`,
+      metadata: {
+        kind: "credit_pack",
+        userId: user.id,
+        packId: pack.id,
+        credits: String(pack.credits),
+      },
+    });
+
+    return res.json({ url: session.url });
+  } catch (err) {
+    console.error("[billing/credits/checkout] Stripe error:", err?.message);
+    return res.status(500).json({ error: "Could not create credit checkout session. Please try again." });
+  }
+});
+
 // ── POST /portal ──────────────────────────────────────────────────────────────
 // Opens the Stripe Customer Portal for an existing subscriber.
 // Used for plan changes, cancellation, and invoice history.
@@ -193,6 +267,44 @@ router.post("/webhook", async (req, res) => {
 
       case "checkout.session.completed": {
         const session = event.data.object;
+
+        if (session.mode === "payment" && session.metadata?.kind === "credit_pack") {
+          const userId = session.metadata?.userId;
+          const packId = session.metadata?.packId;
+          const credits = Number(session.metadata?.credits || 0);
+
+          if (userId && packId && credits > 0) {
+            const expiresAt = new Date();
+            expiresAt.setMonth(expiresAt.getMonth() + 1);
+
+            db.prepare(`
+              INSERT INTO credit_purchases (
+                id,
+                user_id,
+                pack_id,
+                credits_purchased,
+                credits_used,
+                amount_paid,
+                stripe_session_id,
+                expires_at
+              )
+              VALUES (?, ?, ?, ?, 0, ?, ?, ?)
+            `).run(
+              randomUUID(),
+              userId,
+              packId,
+              credits,
+              session.amount_total ?? 0,
+              session.id,
+              expiresAt.toISOString()
+            );
+
+            console.log(`[billing] credit pack completed → user ${userId} → ${credits} credits`);
+          }
+
+          break;
+        }
+
         if (session.mode !== "subscription") break;
         const userId = session.metadata?.userId;
         const planId = session.metadata?.planId;

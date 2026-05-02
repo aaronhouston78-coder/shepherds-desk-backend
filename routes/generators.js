@@ -13,6 +13,7 @@ import { generate, applyPlanGating, getTool } from "../services/aiService.js";
 import { formatGenerationResponse, formatUsageResponse, formatSavedRow, formatTemplate, generationErrorResponse } from "../services/responseFormatter.js";
 import { getDb }           from "../db/database.js";
 import { getPlan, remainingCredits } from "../config/plans.js";
+import { deductAddOnCredits } from "../services/creditAddOns.js";
 
 const router = Router();
 router.use(requireAuth);
@@ -44,6 +45,11 @@ router.post(
   db.prepare(
     "INSERT INTO usage_events (id, user_id, event_type, tool_id, credits_used) VALUES (?, ?, 'generation', ?, ?)"
   ).run(eventId, req.userId, toolId, cost);
+
+  const addOnCreditsToDeduct = Math.max(0, cost - (req.monthlyRemaining ?? 0));
+  if (addOnCreditsToDeduct > 0) {
+    deductAddOnCredits(req.userId, addOnCreditsToDeduct);
+  }
 
   if (req.trialFingerprint) {
     incrementFingerprintUsage(db, req.trialFingerprint, cost);

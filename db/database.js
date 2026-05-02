@@ -72,6 +72,18 @@ function initSchema(db) {
       created_at   TEXT NOT NULL DEFAULT (datetime('now'))
     );
 
+    CREATE TABLE IF NOT EXISTS credit_purchases (
+      id                TEXT PRIMARY KEY,
+      user_id           TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      pack_id           TEXT NOT NULL,
+      credits_purchased INTEGER NOT NULL,
+      credits_used      INTEGER NOT NULL DEFAULT 0,
+      amount_paid       INTEGER NOT NULL,
+      stripe_session_id TEXT,
+      created_at        TEXT NOT NULL DEFAULT (datetime('now')),
+      expires_at        TEXT NOT NULL
+    );
+
     CREATE TABLE IF NOT EXISTS team_workspaces (
       id            TEXT PRIMARY KEY,
       owner_user_id TEXT NOT NULL UNIQUE REFERENCES users(id) ON DELETE CASCADE,

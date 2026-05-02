@@ -4,8 +4,9 @@
 // Trial plan no longer exists as a default — existing trial rows are treated
 // as zero-credit accounts that require an upgrade.
 
-import { getDb }                                        from "../db/database.js";
-import { hasEnoughCredits, getCreditCost, remainingCredits } from "../config/plans.js";
+import { getDb } from "../db/database.js";
+import { getPlan, getCreditCost } from "../config/plans.js";
+import { getActiveAddOnCredits } from "../services/creditAddOns.js";
 
 export function enforceCreditLimit(req, res, next) {
   // Owner bypasses everything
@@ -32,20 +33,27 @@ export function enforceCreditLimit(req, res, next) {
   `).get(req.userId);
 
   const creditsUsed = row?.total ?? 0;
+  const plan = getPlan(planId);
+  const cost = getCreditCost(toolId);
+  const monthlyRemaining = Math.max(0, plan.creditsPerMonth - creditsUsed);
+  const addOnCreditsRemaining = getActiveAddOnCredits(req.userId);
+  const availableCredits = monthlyRemaining + addOnCreditsRemaining;
 
-  if (!hasEnoughCredits(planId, creditsUsed, toolId)) {
-    const cost      = getCreditCost(toolId);
-    const remaining = remainingCredits(planId, creditsUsed);
+  if (availableCredits < cost) {
     return res.status(429).json({
-      error: remaining === 0
-        ? "You do not have enough credits for this request. Your saved content remains available, and new generations will resume when your credits reset at the start of your next billing cycle."
-        : `This tool requires ${cost} credit${cost !== 1 ? "s" : ""} and you have ${remaining} remaining this month.`,
+      error:
+        "You do not have enough credits for this request. Your saved content remains available, and new generations will resume when your credits reset at the start of your next billing cycle.",
       code: "CREDITS_EXHAUSTED",
-      remaining,
+      remaining: availableCredits,
+      monthlyRemaining,
+      addOnCreditsRemaining,
     });
   }
 
-  req.creditsUsed       = creditsUsed;
-  req.creditCostForTool = getCreditCost(toolId);
+  req.creditsUsed = creditsUsed;
+  req.creditCostForTool = cost;
+  req.monthlyRemaining = monthlyRemaining;
+  req.addOnCreditsRemaining = addOnCreditsRemaining;
+  req.availableCredits = availableCredits;
   next();
 }

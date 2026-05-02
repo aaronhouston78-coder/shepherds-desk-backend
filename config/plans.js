@@ -114,6 +114,35 @@ export const TOOL_CREDIT_COSTS = {
 };
 
 export const DEFAULT_CREDIT_COST = 2;
+
+export const ADD_ON_CREDIT_PACKS = {
+  boost10: {
+    id: "boost10",
+    label: "10 Extra Credits",
+    credits: 10,
+    price: 12,
+    description: "Best for one extra sermon or a few smaller tools.",
+  },
+  boost20: {
+    id: "boost20",
+    label: "20 Extra Credits",
+    credits: 20,
+    price: 22,
+    description: "Best for a short ministry push before your credits reset.",
+  },
+  boost35: {
+    id: "boost35",
+    label: "35 Extra Credits",
+    credits: 35,
+    price: 35,
+    description: "Best for a heavier month when you need extra sermons, studies, or communication tools.",
+  },
+};
+
+export function getAddOnCreditPack(packId) {
+  return ADD_ON_CREDIT_PACKS[packId] ?? null;
+}
+
 export const VALID_PLAN_IDS      = Object.keys(PLANS);
 export const DEFAULT_PLAN        = "pending"; // new accounts — must subscribe to generate
 
