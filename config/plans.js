@@ -36,7 +36,7 @@ export const PLANS = {
   price:           19,
   currency:        "usd",
   interval:        "month",
-  creditsPerMonth: 40,
+  creditsPerMonth: 25,
   features: {
     savedGenerations: true,
     savedTemplates:   true,
@@ -50,7 +50,7 @@ growth: {
   price:           49,
   currency:        "usd",
   interval:        "month",
-  creditsPerMonth: 140,
+  creditsPerMonth: 60,
   features: {
     savedGenerations: true,
     savedTemplates:   true,
@@ -64,12 +64,12 @@ team: {
   price:           99,
   currency:        "usd",
   interval:        "month",
-  creditsPerMonth: 300,
+  creditsPerMonth: 125,
   features: {
     savedGenerations: true,
     savedTemplates:   true,
     teamAccess:       true,
-    seats:            5,
+    seats:            3,
   },
 },
   // ── Owner plan ───────────────────────────────────────────────────────────────
@@ -106,11 +106,11 @@ export function getStripePriceId(planId) {
 // One credit = one generation unit.
 // Costs reflect API expense and output complexity.
 export const TOOL_CREDIT_COSTS = {
-  "sermon":       4,
-  "bible-study":  3,
-  "announcement": 1,
-  "caption":      1,
-  "follow-up":    1,
+  "sermon":       7,
+  "bible-study":  5,
+  "announcement": 3,
+  "caption":      3,
+  "follow-up":    3,
 };
 
 export const DEFAULT_CREDIT_COST = 2;

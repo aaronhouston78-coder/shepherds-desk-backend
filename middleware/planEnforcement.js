@@ -38,7 +38,7 @@ export function enforceCreditLimit(req, res, next) {
     const remaining = remainingCredits(planId, creditsUsed);
     return res.status(429).json({
       error: remaining === 0
-        ? "You have used all credits for this month. Your allowance resets on the 1st."
+        ? "You do not have enough credits for this request. Your saved content remains available, and new generations will resume when your credits reset at the start of your next billing cycle."
         : `This tool requires ${cost} credit${cost !== 1 ? "s" : ""} and you have ${remaining} remaining this month.`,
       code: "CREDITS_EXHAUSTED",
       remaining,
