@@ -1,14 +1,149 @@
+import Database from "better-sqlite3";
+import { join, dirname } from "path";
+import { fileURLToPath } from "url";
 
-import pkg from "pg";
-const { Pool } = pkg;
+const __dirname = dirname(fileURLToPath(import.meta.url));
+const DB_PATH = process.env.SD_TEST_DB ?? join(__dirname, "../data/shepherds_desk.db");
 
-const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
-  ssl: { rejectUnauthorized: false },
-});
+let db;
 
-export const db = {
-  query: (text, params) => pool.query(text, params),
-};
+export function getDb() {
+  if (!db) {
+    db = new Database(DB_PATH);
+    db.pragma("journal_mode = WAL");
+    db.pragma("foreign_keys = ON");
+    initSchema(db);
+  }
+  return db;
+}
 
-console.log("Using PostgreSQL database");
+function initSchema(db) {
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS users (
+      id                 TEXT PRIMARY KEY,
+      name               TEXT NOT NULL,
+      email              TEXT NOT NULL UNIQUE,
+      password           TEXT NOT NULL,
+      church_name        TEXT,
+      role               TEXT,
+      plan               TEXT NOT NULL DEFAULT 'starter',
+      is_owner           INTEGER NOT NULL DEFAULT 0,
+      email_verified     INTEGER NOT NULL DEFAULT 0,
+      verify_token       TEXT,
+      verify_expires     TEXT,
+      trial_credits_used INTEGER NOT NULL DEFAULT 0,
+      reg_fingerprint    TEXT,
+      stripe_customer_id TEXT,
+      stripe_sub_id      TEXT,
+      stripe_sub_status  TEXT,
+      created_at         TEXT NOT NULL DEFAULT (datetime('now')),
+      updated_at         TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+
+    CREATE TABLE IF NOT EXISTS saved_generations (
+      id          TEXT PRIMARY KEY,
+      user_id     TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      tool_id     TEXT NOT NULL,
+      tool_label  TEXT NOT NULL,
+      title       TEXT NOT NULL,
+      form_data   TEXT NOT NULL,
+      output      TEXT NOT NULL,
+      created_at  TEXT NOT NULL DEFAULT (datetime('now')),
+      updated_at  TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+
+    CREATE TABLE IF NOT EXISTS saved_templates (
+      id          TEXT PRIMARY KEY,
+      user_id     TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      tool_id     TEXT NOT NULL,
+      tool_label  TEXT NOT NULL,
+      name        TEXT NOT NULL,
+      description TEXT,
+      form_data   TEXT NOT NULL,
+      created_at  TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+
+    CREATE TABLE IF NOT EXISTS usage_events (
+      id           TEXT PRIMARY KEY,
+      user_id      TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      event_type   TEXT NOT NULL DEFAULT 'generation',
+      tool_id      TEXT NOT NULL,
+      credits_used INTEGER NOT NULL DEFAULT 1,
+      created_at   TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+
+    CREATE TABLE IF NOT EXISTS credit_purchases (
+      id                TEXT PRIMARY KEY,
+      user_id           TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      pack_id           TEXT NOT NULL,
+      credits_purchased INTEGER NOT NULL,
+      credits_used      INTEGER NOT NULL DEFAULT 0,
+      amount_paid       INTEGER NOT NULL,
+      stripe_session_id TEXT,
+      created_at        TEXT NOT NULL DEFAULT (datetime('now')),
+      expires_at        TEXT NOT NULL
+    );
+
+    CREATE TABLE IF NOT EXISTS team_workspaces (
+      id            TEXT PRIMARY KEY,
+      owner_user_id TEXT NOT NULL UNIQUE REFERENCES users(id) ON DELETE CASCADE,
+      name          TEXT NOT NULL,
+      seat_limit    INTEGER NOT NULL DEFAULT 5,
+      created_at    TEXT NOT NULL DEFAULT (datetime('now')),
+      updated_at    TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+
+    CREATE TABLE IF NOT EXISTS team_members (
+      id           TEXT PRIMARY KEY,
+      workspace_id TEXT NOT NULL REFERENCES team_workspaces(id) ON DELETE CASCADE,
+      user_id      TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      role         TEXT NOT NULL DEFAULT 'member',
+      status       TEXT NOT NULL DEFAULT 'active',
+      created_at   TEXT NOT NULL DEFAULT (datetime('now')),
+      UNIQUE(workspace_id, user_id)
+    );
+
+    CREATE TABLE IF NOT EXISTS fingerprint_registry (
+      fingerprint        TEXT PRIMARY KEY,
+      total_credits_used INTEGER NOT NULL DEFAULT 0,
+      first_seen         TEXT NOT NULL DEFAULT (datetime('now')),
+      last_seen          TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_gen_user ON saved_generations(user_id);
+    CREATE INDEX IF NOT EXISTS idx_tpl_user ON saved_templates(user_id);
+    CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
+    CREATE INDEX IF NOT EXISTS idx_usage_user ON usage_events(user_id);
+    CREATE INDEX IF NOT EXISTS idx_usage_month ON usage_events(user_id, event_type, created_at);
+    CREATE INDEX IF NOT EXISTS idx_users_fp ON users(reg_fingerprint);
+    CREATE INDEX IF NOT EXISTS idx_team_workspace_owner ON team_workspaces(owner_user_id);
+    CREATE INDEX IF NOT EXISTS idx_team_members_workspace ON team_members(workspace_id);
+    CREATE INDEX IF NOT EXISTS idx_team_members_user ON team_members(user_id);
+  `);
+
+  const cols = db.prepare("PRAGMA table_info(users)").all().map(r => r.name);
+  const migrations = [
+    ["email_verified",     "ALTER TABLE users ADD COLUMN email_verified INTEGER NOT NULL DEFAULT 0"],
+    ["verify_token",       "ALTER TABLE users ADD COLUMN verify_token TEXT"],
+    ["verify_expires",     "ALTER TABLE users ADD COLUMN verify_expires TEXT"],
+    ["trial_credits_used", "ALTER TABLE users ADD COLUMN trial_credits_used INTEGER NOT NULL DEFAULT 0"],
+    ["reg_fingerprint",    "ALTER TABLE users ADD COLUMN reg_fingerprint TEXT"],
+    ["is_owner",           "ALTER TABLE users ADD COLUMN is_owner INTEGER NOT NULL DEFAULT 0"],
+    ["stripe_customer_id", "ALTER TABLE users ADD COLUMN stripe_customer_id TEXT"],
+    ["stripe_sub_id",      "ALTER TABLE users ADD COLUMN stripe_sub_id TEXT"],
+    ["stripe_sub_status",  "ALTER TABLE users ADD COLUMN stripe_sub_status TEXT"],
+  ];
+
+  for (const [col, sql] of migrations) {
+    if (!cols.includes(col)) db.prepare(sql).run();
+  }
+
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS fingerprint_registry (
+      fingerprint        TEXT PRIMARY KEY,
+      total_credits_used INTEGER NOT NULL DEFAULT 0,
+      first_seen         TEXT NOT NULL DEFAULT (datetime('now')),
+      last_seen          TEXT NOT NULL DEFAULT (datetime('now'))
+    )
+  `);
+}
