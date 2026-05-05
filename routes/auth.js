@@ -225,47 +225,6 @@ user = await refreshPaidLoginUserFromStripe(db, user); if (!user) {
   });
 });
 
-
-// ── PATCH /change-password ───────────────────────────────────────────────────
-
-router.patch("/change-password", requireAuth, async (req, res) => {
-  const { currentPassword, newPassword, confirmPassword } = req.body || {};
-
-  if (!currentPassword || !newPassword || !confirmPassword) {
-    return res.status(400).json({ error: "All password fields are required." });
-  }
-
-  if (newPassword.length < 8) {
-    return res.status(400).json({ error: "New password must be at least 8 characters." });
-  }
-
-  if (newPassword !== confirmPassword) {
-    return res.status(400).json({ error: "New passwords do not match." });
-  }
-
-  const db = getDb();
-  const user = db.prepare("SELECT id, password FROM users WHERE id = ?").get(req.userId);
-
-  if (!user) {
-    return res.status(404).json({ error: "User not found." });
-  }
-
-  const valid = await bcrypt.compare(currentPassword, user.password);
-  if (!valid) {
-    return res.status(401).json({ error: "Current password is incorrect." });
-  }
-
-  const hash = await bcrypt.hash(newPassword, 12);
-
-  db.prepare(`
-    UPDATE users
-    SET password = ?, updated_at = datetime('now')
-    WHERE id = ?
-  `).run(hash, req.userId);
-
-  return res.json({ message: "Password changed successfully." });
-});
-
 // ── GET /me ───────────────────────────────────────────────────────────────────
 
 router.get("/me", requireAuth, (req, res) => {
@@ -310,4 +269,3 @@ function safeUser(u) {
 }
 
 export default router;
-backend/routes/auth.js
