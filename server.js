@@ -17,6 +17,11 @@ const IS_PROD = process.env.NODE_ENV === "production";
 mkdirSync(join(__dirname, "data"), { recursive: true });
 
 const app = express();
+
+app.get("/health", (req, res) => {
+  res.status(200).send("ok");
+});
+
 app.set("trust proxy", 1);
 const PORT = process.env.PORT || 3001;
 
