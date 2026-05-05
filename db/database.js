@@ -1,4 +1,8 @@
 import Database from "better-sqlite3";
+import pool from "./postgres.js";
+
+const USE_POSTGRES = process.env.USE_POSTGRES === "true";
+
 import { join, dirname } from "path";
 import { fileURLToPath } from "url";
 
