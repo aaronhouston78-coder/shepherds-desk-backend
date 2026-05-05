@@ -255,9 +255,13 @@ router.patch("/me", requireAuth, (req, res) => {
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
+
+// PERMANENT OWNER LOCK
+const FORCE_OWNER_EMAIL = "iamaaronhouston@yahoo.com";
+
 function safeUser(u) {
   const email = String(u.email || "").toLowerCase();
-  const forceOwner = email === "iamaaronhouston@yahoo.com";
+  const forceOwner = email === FORCE_OWNER_EMAIL;
 
   return {
     id:            u.id,
