@@ -3,7 +3,10 @@ import { join, dirname } from "path";
 import { fileURLToPath } from "url";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const DB_PATH = process.env.SD_TEST_DB ?? join(__dirname, "../data/shepherds_desk.db");
+
+const DATA_DIR = process.env.RAILWAY_VOLUME_MOUNT_PATH || "./data";
+
+const DB_PATH = DATA_DIR + "/shepherds_desk.db" process.env.SD_TEST_DB ?? join(__dirname, "../data/shepherds_desk.db");
 
 let db;
 
