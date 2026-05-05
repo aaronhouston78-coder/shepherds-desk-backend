@@ -56,7 +56,14 @@ app.use(cors({
   origin: (origin, callback) => {
     if (!origin) return callback(null, true);
 
-    if (CONFIGURED_ORIGIN && origin === CONFIGURED_ORIGIN) return callback(null, true);
+    const allowedOrigins = [
+      CONFIGURED_ORIGIN,
+      "https://theshepherdsdesk.org",
+      "https://www.theshepherdsdesk.org",
+      "https://shepherds-desk-frontend.netlify.app",
+    ].filter(Boolean);
+
+    if (allowedOrigins.includes(origin)) return callback(null, true);
 
     if (!IS_PROD && /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin)) {
       return callback(null, true);
