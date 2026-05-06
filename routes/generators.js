@@ -32,37 +32,33 @@ router.post(
     const tool = getTool(toolId);
 
     try {
-      const raw    = await generate(toolId, toolInput);
-      const output = applyPlanGating(toolId, raw, req.userPlan);
-
       const db      = getDb();
       const cost    = req.creditCostForTool;
       const planId  = req.userPlan ?? "starter";
       const plan    = getPlan(planId);
       const eventId = Math.random().toString(36).slice(2) + Date.now().toString(36);
 
-      try {
-  db.prepare(
-    "INSERT INTO usage_events (id, user_id, event_type, tool_id, credits_used) VALUES (?, ?, 'generation', ?, ?)"
-  ).run(eventId, req.userId, toolId, cost);
+      // Reserve/deduct credits BEFORE calling Anthropic.
+      // If credit recording fails, generation is stopped to protect the business.
+      db.prepare(
+        "INSERT INTO usage_events (id, user_id, event_type, tool_id, credits_used) VALUES (?, ?, 'generation', ?, ?)"
+      ).run(eventId, req.userId, toolId, cost);
 
-  const addOnCreditsToDeduct = Math.max(0, cost - (req.monthlyRemaining ?? 0));
-  if (addOnCreditsToDeduct > 0) {
-    deductAddOnCredits(req.userId, addOnCreditsToDeduct);
-  }
+      const addOnCreditsToDeduct = Math.max(0, cost - (req.monthlyRemaining ?? 0));
+      if (addOnCreditsToDeduct > 0) {
+        deductAddOnCredits(req.userId, addOnCreditsToDeduct);
+      }
 
-  if (req.trialFingerprint) {
-    incrementFingerprintUsage(db, req.trialFingerprint, cost);
-  }
-} catch (usageErr) {
-  console.error(
-    `[usage_events] non-fatal logging failure toolId=${toolId} userId=${req.userId} err=${usageErr?.message ?? usageErr}`
-  );
-}
+      if (req.trialFingerprint) {
+        incrementFingerprintUsage(db, req.trialFingerprint, cost);
+      }
 
-return res.json(
-  formatGenerationResponse(output, req.creditsUsed ?? 0, plan.creditsPerMonth, cost)
-);
+      const raw    = await generate(toolId, toolInput);
+      const output = applyPlanGating(toolId, raw, req.userPlan);
+
+      return res.json(
+        formatGenerationResponse(output, req.creditsUsed ?? 0, plan.creditsPerMonth, cost)
+      );
     } catch (err) {
       // Log internally — never expose error details to client
       console.error(`[generate] toolId=${toolId} userId=${req.userId} err=${err?.message ?? err}`);
