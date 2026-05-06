@@ -33,7 +33,7 @@ router.post(
 
     try {
       const db      = getDb();
-      const cost    = req.creditCostForTool;
+      const cost = req.creditCostForTool ?? tool.creditCost ?? 1;
       const planId  = req.userPlan ?? "starter";
       const plan    = getPlan(planId);
       const eventId = Math.random().toString(36).slice(2) + Date.now().toString(36);
