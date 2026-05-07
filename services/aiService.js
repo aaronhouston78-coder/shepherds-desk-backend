@@ -531,7 +531,7 @@ function parseSections(output, sectionOrder) {
 }
 
 function reassembleSections(sections, order) {
-  return order.map(s => `\${s}\n\${sections[s]}`).join("\n\n");
+  return order.map(s => `${s}\n${sections[s]}`).join("\n\n");
 }
 
 // ── Trial truncation ──────────────────────────────────────────────────────────
