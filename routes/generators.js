@@ -44,8 +44,10 @@ router.post(
         "INSERT INTO usage_events (id, user_id, event_type, tool_id, credits_used) VALUES (?, ?, 'generation', ?, ?)"
       ).run(eventId, req.userId, toolId, cost);
 
-      const addOnCreditsToDeduct = Math.max(0, cost - (req.monthlyRemaining ?? 0));
-      if (addOnCreditsToDeduct > 0) {
+      const monthlyRemaining = req.monthlyRemaining ?? cost;
+      const addOnCreditsToDeduct = Math.max(0, cost - monthlyRemaining);
+
+      if (req.userPlan !== "owner" && addOnCreditsToDeduct > 0) {
         deductAddOnCredits(req.userId, addOnCreditsToDeduct);
       }
 
