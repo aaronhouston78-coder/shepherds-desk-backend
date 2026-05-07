@@ -217,11 +217,18 @@ user = await refreshPaidLoginUserFromStripe(db, user); if (!user) {
   if (!valid) {
     return res.status(401).json({ error: "Incorrect password. Please try again." });
   }
-  const token = generateToken(user);
+  const responseUser = safeUser(user);
+  const token = generateToken({
+    ...user,
+    plan: responseUser.plan,
+    is_owner: responseUser.isOwner ? 1 : 0,
+    email_verified: responseUser.emailVerified ? 1 : 0,
+  });
+
   return res.json({
     token,
-    user:               safeUser(user),
-    requiresVerification: !user.email_verified,
+    user: responseUser,
+    requiresVerification: !responseUser.emailVerified,
   });
 });
 
