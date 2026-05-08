@@ -354,7 +354,14 @@ case "customer.subscription.updated": {
     break;
   }
 
-  const effectivePlan = isActiveStatus ? (planId ?? "starter") : "pending";
+  if (!isActiveStatus) {
+    console.log(
+      `[billing] ignoring ${event.type} for user ${targetUserId} because subscription status is ${status}`
+    );
+    break;
+  }
+
+  const effectivePlan = planId ?? "starter";
 
   db.prepare(
     "UPDATE users SET plan = ?, stripe_sub_id = ?, stripe_sub_status = ?, updated_at = datetime('now') WHERE id = ?"
