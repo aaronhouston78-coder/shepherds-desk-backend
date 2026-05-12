@@ -42,8 +42,8 @@ export function enforceCreditLimit(req, res, next) {
   if (availableCredits < cost) {
     return res.status(429).json({
       error:
-        "You do not have enough credits for this request. Your saved content remains available, and new generations will resume when your credits reset at the start of your next billing cycle.",
-      code: "CREDITS_EXHAUSTED",
+        `Not enough allowance units. This request requires ${cost} allowance units. You currently have ${availableCredits} remaining. Your allowance renews on your next billing date.`,
+      code: "ALLOWANCE_EXHAUSTED",
       remaining: availableCredits,
       monthlyRemaining,
       addOnCreditsRemaining,

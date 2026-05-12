@@ -128,12 +128,12 @@ router.post("/credits/checkout", requireAuth, async (req, res) => {
   const pack = getAddOnCreditPack(packId);
 
   if (!pack) {
-    return res.status(400).json({ error: "Invalid credit pack selected." });
+    return res.status(400).json({ error: "Invalid Ministry Boost selected." });
   }
 
   if (req.userPlan === "pending" || req.userPlan === "trial") {
     return res.status(402).json({
-      error: "A paid subscription is required before purchasing additional credits.",
+      error: "A paid subscription is required before adding a Ministry Boost.",
       code: "SUBSCRIPTION_REQUIRED",
     });
   }
@@ -175,8 +175,8 @@ router.post("/credits/checkout", requireAuth, async (req, res) => {
           quantity: 1,
         },
       ],
-      success_url: `${APP_URL()}/settings?credits=success`,
-      cancel_url: `${APP_URL()}/settings?credits=cancelled`,
+      success_url: `${APP_URL()}/settings?boost=success`,
+      cancel_url: `${APP_URL()}/settings?boost=cancelled`,
       metadata: {
         kind: "credit_pack",
         userId: user.id,
@@ -188,7 +188,7 @@ router.post("/credits/checkout", requireAuth, async (req, res) => {
     return res.json({ url: session.url });
   } catch (err) {
     console.error("[billing/credits/checkout] Stripe error:", err?.message);
-    return res.status(500).json({ error: "Could not create credit checkout session. Please try again." });
+    return res.status(500).json({ error: "Could not create Ministry Boost checkout session. Please try again." });
   }
 });
 
